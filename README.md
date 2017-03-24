@@ -60,7 +60,7 @@ sqlcmd -U Username -P=password -S MOSAICDATABASE -i C:\\IQ\\IQExportDaily.sql
 -s";" -W -h-1 -o
 \\\\SERVERPATH\\app2\\MOSAIQ\_App\\EXPORT\\IQ\\Upload\\ELQ\_UNMCC%date:\~-4,4%\_%date:\~-10,2%.csv
 
-![](media/67af42dd5a8fe9757ad4616f3187a716.png)
+![image](https://cloud.githubusercontent.com/assets/403087/24313510/af1a6d00-10a2-11e7-90b3-aa2520dce378.png)
 
 The bat file that executes a winscp script located on the mq outbound interface
 server. It fires at 5am, and the bat script is  
@@ -68,7 +68,7 @@ in C:\\IQScripts and is named iQueueUploadAndMove.bat. The idea is to upload the
 file securely and automatically, and move it out of the staging area into an
 archival area.
 
-![](media/6e38c475514b082edc1f4b07a543e42b.png)
+![image](https://cloud.githubusercontent.com/assets/403087/24313516/b55b72c2-10a2-11e7-80f6-31e3c46aee73.png)
 
 Off here, iQueue analyze the data and refine the scheduling templates to
 optimize the patient experience.
