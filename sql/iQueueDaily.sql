@@ -53,9 +53,6 @@ SELECT
 		vwQB.Sch_Id
 into #Queued	
 FROM MOSAIQ.dbo.vw_QueBro AS vwQB
-JOIN MOSAIQ.dbo.Ident	AS I ON vwQB.Pat_ID1 = I.Pat_ID1
-JOIN MOSAIQ.dbo.Admin	AS A ON vwQB.Pat_ID1 = A.Pat_ID1
-JOIN MOSAIQ.dbo.Patient	AS P ON vwQB.Pat_ID1 = P.Pat_ID1
 WHERE vwQB.Version = 0   
 	AND (
 		DATENAME(weekday,GETDATE()) =  'Monday' and CONVERT(char(8),vwQB.App_DtTm,112) = CONVERT(char(8), GETDATE() -3, 112)      
@@ -123,6 +120,7 @@ FROM
 	FROM MOSAIQ.dbo.vw_Schedule vwSCH
 	JOIN MOSAIQ.dbo.Schedule AS SCH ON vwSCH.Pat_ID1 = SCH.Pat_ID1 and vwSCH.Sch_ID = SCH.Sch_iD 
 	LEFT OUTER JOIN #Queued on vwSCH.Sch_Id = #Queued.Sch_id
+	LEFT JOIN MOSAIQ.dbo.Staff   AS Staff on vwSCH.Staff_ID = Staff.Staff_ID
 	JOIN MOSAIQ.dbo.Ident	AS I ON vwSCH.Pat_ID1 = I.Pat_ID1
 	JOIN MOSAIQ.dbo.Admin	AS A ON vwSCH.Pat_ID1 = A.Pat_ID1
 	JOIN MOSAIQ.dbo.Patient	AS P ON vwSCH.Pat_ID1 = P.Pat_ID1
@@ -131,28 +129,31 @@ FROM
 				DATENAME(weekday,GETDATE()) =  'Monday' and CONVERT(char(8),vwSCH.App_DtTm,112)= CONVERT(char(8), GETDATE()-3,112)    
 		  OR	DATENAME(weekday,GETDATE()) <> 'Monday' and CONVERT(char(8),vwSCH.App_DtTm,112)= CONVERT(char(8), GETDATE()-1,112)     
 			 )
-		AND (vwSCH.Location LIKE '%Infusion%'		-- '4th floor infusion', 'Infusion Add On'
-			OR vwSCH.Location LIKE '%Chair%'		-- Bed and Chair are current designations for scheduled locations 
-  			OR vwSCH.Location LIKE '%Bed%'			-- any appt scheduled in a bed or chair is considered an infusion-suite appointment
-			OR vwSCH.Activity LIKE '%Infusion%'		     -- e.g. 1 Hr Infusion Apt, Bed Infusion 3 Hours, sq infusion...
-			OR vwSCH.Activity LIKE '%Blood Trans%'    	     -- e.g. Blood Trans Apt, Blood Transfusion
-			OR vwSCH.Activity LIKE '%Platelet Trans%'	     -- e.g. Platelet Trans Appt, Plantelet Transfusion
-			OR vwSCH.Activity LIKE '%Transfusion%'            -- e.g. Blood Transfusion, Transfusion 2 Hours, Transfusion 3 Hours...
-			OR vwSCH.Activity LIKE '%Platelets%' 
-			OR vwSCH.Activity LIKE '%Phlebotomy%'	
-			OR vwSCH.Activity = 'IV Chemo Initial Hr'		-- e.g. Chemo New Start, Chemo Teach, IV Chemo Initial Hr, SQ/IM Hormonal Chemo...
-			OR vwSCH.Activity = 'IV P Chemo Initial'
-			OR vwSCH.Activity = 'NC IV Push Initial'		-- don't search for '%Chemo%' because will get pre chemo office visits
-			OR vwSCH.Activity = 'SQ/IM Hormonal Chemo'
-			OR vwSCH.Activity = 'SQ/IM NH Chemo'
-			OR vwSCH.Activity =  'Hydration'
-			OR vwSCH.Activity LIKE '%Chemo Teach%'
-			OR vwSCH.Activity LIKE '%Chemo New Start%'
-			OR vwSCH.Activity LIKE '%Stem Cell%'
-			OR vwSCH.Activity LIKE '%Bladder instil. chem%'
-			OR vwSCH.Activity LIKE '%Observation%'
-			OR #Queued.Sch_id IS NOT NULL  --- Actual infusion visit but scheduled for non-infusion appointment
-			) 
+		AND 
+			(
+				vwSCH.Location LIKE '%Infusion%'		-- '4th floor infusion', 'Infusion Add On'
+				OR vwSCH.Location LIKE '%Chair%'		-- Bed and Chair are current designations for scheduled locations 
+  				OR vwSCH.Location LIKE '%Bed%'			-- any appt scheduled in a bed or chair is considered an infusion-suite appointment
+				OR vwSCH.Short_Desc LIKE '%Infusion%'		     -- e.g. 1 Hr Infusion Apt, Bed Infusion 3 Hours, sq infusion...
+				OR vwSCH.Short_Desc LIKE '%Blood Trans%'    	     -- e.g. Blood Trans Apt, Blood Transfusion
+				OR vwSCH.Short_Desc LIKE '%Platelet Trans%'	     -- e.g. Platelet Trans Appt, Plantelet Transfusion
+				OR vwSCH.Short_Desc LIKE '%Transfusion%'            -- e.g. Blood Transfusion, Transfusion 2 Hours, Transfusion 3 Hours...
+				OR vwSCH.Short_Desc LIKE '%Platelets%' 
+				OR vwSCH.Short_Desc LIKE '%Phlebotomy%'	
+				OR vwSCH.Short_Desc = 'IV Chemo Initial Hr'		-- e.g. Chemo New Start, Chemo Teach, IV Chemo Initial Hr, SQ/IM Hormonal Chemo...
+				OR vwSCH.Short_Desc = 'IV P Chemo Initial'
+				OR vwSCH.Short_Desc = 'NC IV Push Initial'		-- don't search for '%Chemo%' because will get pre chemo office visits
+				OR vwSCH.Short_Desc = 'SQ/IM Hormonal Chemo'
+				OR vwSCH.Short_Desc = 'SQ/IM NH Chemo'
+				OR vwSCH.Short_Desc =  'Hydration'
+				OR vwSCH.Short_Desc LIKE '%Chemo Teach%'
+				OR vwSCH.Short_Desc LIKE '%Chemo New Start%'
+				OR vwSCH.Short_Desc LIKE '%Stem Cell%'
+				OR vwSCH.Short_Desc LIKE '%Bladder instil. chem%'
+				OR vwSCH.Short_Desc LIKE '%Observation%'
+				OR #Queued.Sch_id IS NOT NULL  --- Actual infusion visit but scheduled for non-infusion appointment
+				OR Staff.Last_Name = 'Infusion' -- Staff Name is used for 
+			)
 	) AS A
 WHERE IsSamplePatient = 'NO' and IsDeceased = 'NO' and IsInactive = 'NO'
 
@@ -202,6 +203,7 @@ FROM
 		END IsInactive	
 	FROM MOSAIQ.dbo.vw_Schedule vwSCH
 	JOIN MOSAIQ.dbo.Schedule AS SCH ON vwSCH.Pat_ID1 = SCH.Pat_ID1 and vwSCH.Sch_ID = SCH.Sch_iD 
+	LEFT JOIN MOSAIQ.dbo.Staff   AS Staff on vwSCH.Staff_ID = Staff.Staff_ID
 	JOIN MOSAIQ.dbo.Ident	AS I ON vwSCH.Pat_ID1 = I.Pat_ID1
 	JOIN MOSAIQ.dbo.Admin	AS A ON vwSCH.Pat_ID1 = A.Pat_ID1
 	JOIN MOSAIQ.dbo.Patient	AS P ON vwSCH.Pat_ID1 = P.Pat_ID1
@@ -209,27 +211,30 @@ FROM
 		AND convert(char(8),vwSCH.App_DtTm,112) >= CONVERT(char(8),GETDATE(),112)    -- today
 		AND CONVERT(char(8),vwSCH.App_DtTm,112) <= CONVERT(char(8),GETDATE()+60,112) -- 2 months from today
 		
-		AND (vwSCH.Location LIKE '%Infusion%'		-- '4th floor infusion', 'Infusion Add On'
-			OR vwSCH.Location LIKE '%Chair%'		-- Bed and Chair are current designations for scheduled locations 
-  			OR vwSCH.Location LIKE '%Bed%'			-- any appt scheduled in a bed or chair is considered an infusion-suite appointment
-			OR vwSCH.Activity LIKE '%Infusion%'		     -- e.g. 1 Hr Infusion Apt, Bed Infusion 3 Hours, sq infusion...
-			OR vwSCH.Activity LIKE '%Blood Trans%'    	     -- e.g. Blood Trans Apt, Blood Transfusion
-			OR vwSCH.Activity LIKE '%Platelet Trans%'	     -- e.g. Platelet Trans Appt, Plantelet Transfusion
-			OR vwSCH.Activity LIKE '%Transfusion%'            -- e.g. Blood Transfusion, Transfusion 2 Hours, Transfusion 3 Hours...
-			OR vwSCH.Activity LIKE '%Platelets%' 
-			OR vwSCH.Activity LIKE '%Phlebotomy%'	
-			OR vwSCH.Activity = 'IV Chemo Initial Hr'		-- e.g. Chemo New Start, Chemo Teach, IV Chemo Initial Hr, SQ/IM Hormonal Chemo...
-			OR vwSCH.Activity = 'IV P Chemo Initial'
-			OR vwSCH.Activity = 'NC IV Push Initial'		-- don't search for '%Chemo%' because will get pre chemo office visits
-			OR vwSCH.Activity = 'SQ/IM Hormonal Chemo'
-			OR vwSCH.Activity = 'SQ/IM NH Chemo'
-			OR vwSCH.Activity =  'Hydration'
-			OR vwSCH.Activity LIKE '%Chemo Teach%'
-			OR vwSCH.Activity LIKE '%Chemo New Start%'
-			OR vwSCH.Activity LIKE '%Stem Cell%'
-			OR vwSCH.Activity LIKE '%Bladder instil. chem%'
-			OR vwSCH.Activity LIKE '%Observation%'
-		)
+		AND 
+			(
+				vwSCH.Location LIKE '%Infusion%'		-- '4th floor infusion', 'Infusion Add On'
+				OR vwSCH.Location LIKE '%Chair%'		-- Bed and Chair are current designations for scheduled locations 
+  				OR vwSCH.Location LIKE '%Bed%'			-- any appt scheduled in a bed or chair is considered an infusion-suite appointment
+				OR vwSCH.Short_Desc LIKE '%Infusion%'		     -- e.g. 1 Hr Infusion Apt, Bed Infusion 3 Hours, sq infusion...
+				OR vwSCH.Short_Desc LIKE '%Blood Trans%'    	     -- e.g. Blood Trans Apt, Blood Transfusion
+				OR vwSCH.Short_Desc LIKE '%Platelet Trans%'	     -- e.g. Platelet Trans Appt, Plantelet Transfusion
+				OR vwSCH.Short_Desc LIKE '%Transfusion%'            -- e.g. Blood Transfusion, Transfusion 2 Hours, Transfusion 3 Hours...
+				OR vwSCH.Short_Desc LIKE '%Platelets%' 
+				OR vwSCH.Short_Desc LIKE '%Phlebotomy%'	
+				OR vwSCH.Short_Desc = 'IV Chemo Initial Hr'		-- e.g. Chemo New Start, Chemo Teach, IV Chemo Initial Hr, SQ/IM Hormonal Chemo...
+				OR vwSCH.Short_Desc = 'IV P Chemo Initial'
+				OR vwSCH.Short_Desc = 'NC IV Push Initial'		-- don't search for '%Chemo%' because will get pre chemo office visits
+				OR vwSCH.Short_Desc = 'SQ/IM Hormonal Chemo'
+				OR vwSCH.Short_Desc = 'SQ/IM NH Chemo'
+				OR vwSCH.Short_Desc =  'Hydration'
+				OR vwSCH.Short_Desc LIKE '%Chemo Teach%'
+				OR vwSCH.Short_Desc LIKE '%Chemo New Start%'
+				OR vwSCH.Short_Desc LIKE '%Stem Cell%'
+				OR vwSCH.Short_Desc LIKE '%Bladder instil. chem%'
+				OR vwSCH.Short_Desc LIKE '%Observation%'
+				OR Staff.Last_Name = 'Infusion'
+			)
 	) AS A
 WHERE IsSamplePatient = 'NO' and IsDeceased = 'NO' and IsInactive = 'NO'
 
@@ -237,6 +242,7 @@ WHERE IsSamplePatient = 'NO' and IsDeceased = 'NO' and IsInactive = 'NO'
 /* Union together data from #Yesterday with #Future.  Send these results to iQueue */
 SELECT
 	Rec_Type,
+	Unit,
 	Visit_Type,
 	Pat_id1						AS Internal_Patient_ID,
 	ISNULL(S_Activity, ' ')		AS Appt_Type,
@@ -282,6 +288,7 @@ FROM
 	(
 	SELECT 
 		'Past'		AS Rec_Type,
+		'4th Floor Infusion' AS Unit,
 		'Infusion'	AS Visit_Type,
 		Pat_id1,
 		S_Activity,
@@ -300,6 +307,7 @@ FROM
 	UNION
 	SELECT 
 		'Future'	AS Rec_Type,
+		'4th Floor Infusion' AS Unit,
 		'Infusion'	AS Visit_Type,
 		Pat_id1,
 		S_Activity,
